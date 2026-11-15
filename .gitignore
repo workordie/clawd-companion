@@ -1,0 +1,20 @@
+# built from YOUR installed Claude Code: contains Anthropic's code, never commit
+extension/build/
+extension/dist/
+*.vsix
+
+# generated (rebuild with the commands in docs/add-an-animation.md)
+extension/playground/
+animations/clawd.json
+animations/clawd.prev.json
+animations/accessories.json
+animations/parts.json
+animations/transitions.json
+animations/gen/out/
+video/out/
+
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store
+*.mov

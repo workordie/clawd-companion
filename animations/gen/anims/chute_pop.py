@@ -1,0 +1,10 @@
+"""Drag / throw: chute-pop (see _drag.py).  Preview:  python3 gen/preview.py anim chute-pop"""
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from anims._drag import build_drag  # noqa: E402
+
+NAME = 'chute-pop'
+
+
+def build():
+    return build_drag(NAME)

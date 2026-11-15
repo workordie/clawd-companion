@@ -1,0 +1,1195 @@
+/*
+ * Loaded into the Claude Code chat panel right after the extension's own
+ * stylesheet.
+ *
+ * Class names in the panel are CSS-module names with a hash that changes
+ * every release (inputFooterV2_gGYT1w), so rules match the stable prefix
+ * ([class*="inputFooterV2_"]) or an attribute the extension sets
+ * (data-cache-window, data-agents-dot, aria-label).
+ */
+
+/* ===========================================================================
+   Clawd
+   ======================================================================== */
+
+/*
+ * Clawd stands on the input box's top border, 10px from its right edge, at
+ * 96x60, the SVGs' native size (3px per pixel-art cell: sharp on Retina;
+ * on a non-Retina screen an even number per cell, 64x40 or 128x80, keeps
+ * his eyes crisp). The input box is
+ * position:relative; top: -(his height) puts his bottom row on the inner
+ * edge of its 1px top border, so he stands on it whatever its height.
+ */
+.cx-clawd {
+  --cx-w: 96px;
+  --cx-h: 60px;
+  position: absolute;
+  /* placed from the box's top edge in px, never as a % of the box's height,
+     so nothing about him changes when the box grows with more lines */
+  top: calc(-1 * var(--cx-h));
+  right: 10px;
+  bottom: auto;
+  left: auto;
+  box-sizing: content-box;
+  width: var(--cx-w);
+  min-width: var(--cx-w);
+  max-width: var(--cx-w);
+  height: var(--cx-h);
+  min-height: var(--cx-h);
+  max-height: var(--cx-h);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  flex: none;
+  align-self: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  /* where custom.js has moved him: --cx-x left along the border, --cx-y up into the air */
+  transform: translate(var(--cx-x, 0px), var(--cx-y, 0px));
+  will-change: transform;
+}
+
+/*
+ * His hit area: a transparent box over his body only (cells 10-20 x 12-19 of
+ * the 32x20 image, padded a cell), so clicks on the empty parts of the image
+ * still reach the chat. It moves with him. Click him for a reaction; drag him
+ * to pick him up, throw him or drop him.
+ */
+.cx-clawd-hit {
+  position: absolute;
+  top: -27px;
+  right: 40px;
+  bottom: auto;
+  left: auto;
+  width: 39px;
+  height: 27px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  transform: translate(var(--cx-x, 0px), var(--cx-y, 0px));
+}
+
+html.cx-grabbing,
+html.cx-grabbing * {
+  cursor: grabbing !important;
+}
+
+/*
+ * His speech bubble: the extension's own /btw "Side question" panel, taken out
+ * of its dock beside the chat and floated above his head (custom.js finds it,
+ * adds .cx-talk and keeps --cx-bl / --cx-bb / --cx-bh / --cx-tl / --cx-tt on
+ * <html> pointing at him as he moves). Its header, thread, "Answering…" line
+ * and text box are all the extension's; only where it sits and its frame change.
+ */
+.cx-talk {
+  position: fixed !important;
+  left: var(--cx-bl, 16px) !important;
+  bottom: var(--cx-bb, 140px) !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: 40 !important;
+  width: min(380px, calc(100vw - 32px)) !important;
+  min-width: 0 !important;
+  height: auto !important;
+  max-height: var(--cx-bh, 50vh) !important;
+  flex: none !important;
+  margin: 0 !important;
+  border: 1.5px solid #d97757 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.3) !important;
+}
+
+/* no dock to resize it against; the thread scrolls inside the bubble */
+.cx-talk > [class*="resizeHandle_"] {
+  display: none !important;
+}
+
+.cx-talk [class*="thread_"] {
+  min-height: 0 !important;
+}
+
+/* the tail: a turned square under the bubble's bottom edge, pointing down at him */
+.cx-talk-tail {
+  position: fixed;
+  left: var(--cx-tl, 0);
+  top: var(--cx-tt, -100px);
+  z-index: 41;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  background: var(--app-primary-background, #1e1e1e);
+  border-right: 1.5px solid #d97757;
+  border-bottom: 1.5px solid #d97757;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+/* ===========================================================================
+   Input box: "A · Hairline" (the redesigned input footer)
+   Step 1: the look only. Same controls, same order, same behaviour.
+   ======================================================================== */
+
+/* Mode colours: ring/dot, send fill, send icon. dontAsk looks like Manual. */
+fieldset[class*="inputContainer_"] {
+  --cx-mode: #d97757;
+  --cx-send: #c6613f;
+  --cx-send-fg: #faf9f5;
+  --cx-muted: var(--vscode-descriptionForeground, var(--app-secondary-foreground));
+  --cx-hover: var(--vscode-toolbar-hoverBackground, var(--app-ghost-button-hover-background));
+  --cx-bg: var(--vscode-input-background, var(--app-input-background));
+  --cx-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 6.5l3 3 3-3'/%3E%3C/svg%3E");
+}
+fieldset[class*="inputContainer_"][data-permission-mode="acceptEdits"] {
+  --cx-mode: var(--vscode-foreground);
+  --cx-send: var(--vscode-foreground);
+  --cx-send-fg: var(--cx-bg);
+}
+fieldset[class*="inputContainer_"][data-permission-mode="plan"] {
+  --cx-mode: var(--vscode-focusBorder);
+  --cx-send: var(--vscode-button-background);
+  --cx-send-fg: var(--vscode-button-foreground);
+}
+fieldset[class*="inputContainer_"]:is([data-permission-mode="auto"], [data-permission-mode="bypassPermissions"]) {
+  --cx-mode: var(--vscode-errorForeground);
+  --cx-send: var(--vscode-errorForeground);
+  --cx-send-fg: var(--vscode-button-foreground);
+}
+
+/* --- The box ------------------------------------------------------------- */
+
+fieldset[class*="inputContainer_"] {
+  border: 1px solid var(--vscode-input-border, var(--app-input-border));
+  border-radius: 12px;
+  box-shadow: none;
+}
+fieldset[class*="inputContainer_"] > [class*="inputContainerBackground_"] {
+  background: var(--cx-bg);
+  border-radius: 11px;
+}
+fieldset[class*="inputContainer_"][data-permission-mode]:focus-within {
+  border-color: var(--cx-mode);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cx-mode) 14%, transparent);
+}
+
+/* Message field: 13/20, 12px from the top, 14px from the left; the right
+   side leaves room for the mic (8px gap + 24px + 8px). The mirror draws the
+   visible text, so it must match the field exactly. */
+fieldset[class*="inputContainer_"] :is([class*="messageInput_"], [class*="mentionMirror_"]) {
+  font-size: 13px;
+  line-height: 20px;
+  min-height: 20px;
+  padding: 12px 40px 4px 14px;
+}
+fieldset[class*="inputContainer_"] [class*="messageInput_"]:empty::before {
+  color: var(--vscode-input-placeholderForeground, var(--app-input-placeholder-foreground));
+  right: 40px;
+}
+
+/* Mic: 24x24 ghost, 15px icon, centred on the first line of text. */
+fieldset[class*="inputContainer_"] [class*="micButtonWrapper_"] {
+  top: 10px;
+  right: 3px;
+}
+fieldset[class*="inputContainer_"] [class*="micButton_"] {
+  height: 24px;
+  border-radius: 6px;
+  color: var(--cx-muted);
+}
+fieldset[class*="inputContainer_"] [class*="micButton_"]:hover:not(:disabled) {
+  background: var(--cx-hover);
+  color: var(--vscode-foreground);
+}
+fieldset[class*="inputContainer_"] [class*="micIconPuck_"] {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+fieldset[class*="inputContainer_"] [class*="micIcon_"] {
+  width: 15px;
+  height: 15px;
+}
+
+/* --- Footer row: no divider line, ghost controls ------------------------- */
+
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] {
+  border-top: 0;
+  gap: 2px;
+  padding: 2px 6px 6px 6px;
+  color: var(--cx-muted);
+}
+fieldset[class*="inputContainer_"] [class*="modelPillRow_"] {
+  padding: 0 6px 6px;
+}
+
+/* Every footer control: 28px tall, radius 7, no fill until hovered. */
+fieldset[class*="inputContainer_"] :is([class*="inputFooterV2_"], [class*="modelPillRow_"]) :is(
+  [class*="addButton_"],
+  [class*="menuButton_"],
+  [class*="usageButtonV2_"],
+  [data-cache-window],
+  [class*="pill_"],
+  [class*="modelPill_"],
+  [class*="footerButton_"]
+) {
+  box-sizing: border-box;
+  height: 28px;
+  min-height: 28px;
+  line-height: 28px;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  filter: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+fieldset[class*="inputContainer_"] :is([class*="inputFooterV2_"], [class*="modelPillRow_"]) :is(
+  [class*="addButton_"],
+  [class*="menuButton_"],
+  [class*="usageButtonV2_"],
+  [class*="pill_"][href],
+  [class*="modelPill_"],
+  button[class*="footerButton_"]
+):hover {
+  background: var(--cx-hover);
+  filter: none;
+}
+fieldset[class*="inputContainer_"] :is([class*="inputFooterV2_"], [class*="modelPillRow_"]) :is(button, a):active:not(:disabled) {
+  transform: translateY(0.5px);
+  filter: none;
+}
+fieldset[class*="inputContainer_"] :is([class*="inputFooterV2_"], [class*="modelPillRow_"]) :is(button, a):focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="footerButton_"] span {
+  line-height: 28px;
+}
+
+/* + and /: 28x28 squares. Their icons are drawn inside a 20-unit box, so a
+   28px svg gives the ~16px glyph the design asks for. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] :is([class*="addButton_"], [class*="menuButton_"]) {
+  width: 28px;
+  color: var(--vscode-foreground);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] :is([class*="addButton_"], [class*="menuButton_"]) svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* A hairline after / (1x14px, 5px each side) splits actions from status.
+   It's painted on the footer's own background, at a fixed spot (+ and / are
+   always first, 28px each): a mark that sticks out of a control would make
+   the footer think it's clipped and drop to its narrowest layout. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="menuButton_"] {
+  margin-right: 9px;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] {
+  background-image: linear-gradient(color-mix(in srgb, var(--vscode-foreground) 16%, transparent), color-mix(in srgb, var(--vscode-foreground) 16%, transparent));
+  background-repeat: no-repeat;
+  background-position: 69px 9px;
+  background-size: 1px 14px;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="divider_"] {
+  width: 1px;
+  height: 14px;
+  margin: 0 5px;
+  background: color-mix(in srgb, var(--vscode-foreground) 16%, transparent);
+}
+
+/* Context ring (shows once more than half is used; click compacts). */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="usageButtonV2_"] {
+  width: 28px;
+  color: var(--cx-muted);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="usageButtonV2_"] svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* Prompt cache: clock + minutes left in the muted colour; expired = "cold"
+   in the error colour. Status only, not a button. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [data-cache-window] {
+  color: var(--cx-muted);
+  padding: 0 6px 0 0;
+  cursor: default;
+}
+/* the clock is drawn in a 20-unit box: 18px gives the design's ~14px glyph */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [data-cache-window] svg {
+  width: 18px;
+  height: 18px;
+  margin-right: 3px;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [data-cache-window] svg path {
+  transform: none;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [data-cache-window="cold"] {
+  color: var(--vscode-errorForeground, var(--app-error-foreground));
+  padding-right: 6px;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [data-cache-window="cold"]::after {
+  content: "cold";
+}
+
+/* Remote Control: phone icon + a 6px blue dot while it's on (red if it
+   failed). The label moves to the tooltip, which the extension already sets. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="pill_"] {
+  position: relative;
+  width: 28px;
+  padding: 0;
+  justify-content: center;
+  color: var(--cx-muted);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="pill_"]:hover {
+  color: var(--vscode-foreground);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="pill_"] svg {
+  display: block;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="pill_"] span {
+  display: none;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="pill_"]::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vscode-errorForeground);
+  box-shadow: 0 0 0 2px var(--cx-bg);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="pillOn_"]::after {
+  background: var(--vscode-charts-blue);
+}
+
+/* Agents: status dot + count, muted. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [data-agents-dot] {
+  gap: 6px;
+  margin-left: 0;
+  padding: 0 7px;
+  color: var(--cx-muted);
+}
+
+/* Model: name in the text colour + a 12px chevron. Its effort word stays
+   (muted) only when the effort slider isn't there (see below). */
+fieldset[class*="inputContainer_"] [class*="modelPill_"]:not([data-agents-dot]) {
+  gap: 4px;
+  margin-left: 0;
+  padding: 0 5px 0 8px;
+  color: var(--vscode-foreground);
+}
+fieldset[class*="inputContainer_"] [class*="modelPill_"]:not([data-agents-dot])::after {
+  content: "";
+  flex: none;
+  width: 12px;
+  height: 12px;
+  background: var(--cx-muted);
+  -webkit-mask: var(--cx-chevron) center / 12px 12px no-repeat;
+  mask: var(--cx-chevron) center / 12px 12px no-repeat;
+}
+fieldset[class*="inputContainer_"] [class*="modelPillEffort_"] {
+  margin-left: 0;
+  color: var(--cx-muted);
+}
+
+/* Permission mode: a 7px dot in the mode colour + the mode name + chevron. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] button[class*="footerButton_"][title*="Shift+Tab"] {
+  gap: 6px;
+  padding: 0 6px 0 9px;
+  color: var(--vscode-foreground);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] button[class*="footerButton_"][title*="Shift+Tab"] > svg {
+  display: none !important; /* some mode icons carry an inline display:block */
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] button[class*="footerButton_"][title*="Shift+Tab"] > span {
+  display: inline-block;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] button[class*="footerButton_"][title*="Shift+Tab"]::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cx-mode);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] button[class*="footerButton_"][title*="Shift+Tab"]::after {
+  content: "";
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-left: -2px;
+  background: var(--cx-muted);
+  -webkit-mask: var(--cx-chevron) center / 12px 12px no-repeat;
+  mask: var(--cx-chevron) center / 12px 12px no-repeat;
+}
+
+/* Editor-selection chip: same 12px muted text. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="selectionChip_"] [class*="footerButton_"] {
+  color: var(--cx-muted);
+}
+
+/* --- Order ---------------------------------------------------------------
+   The design's order, set with flex `order` so the extension's DOM is left
+   alone: + · / · context · cache · usage · MCP · agents · Remote ·
+   selection … spacer · model · Ultracode · effort · mode · send. Anything
+   new the extension adds lands just before the spacer. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > * { order: 25; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [class*="addButtonContainer_"] { order: 1; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [class*="menuButton_"] { order: 2; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > :is(.cx-ctx, :has(> [class*="usageButtonV2_"])) { order: 3; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > :has(> [data-cache-window]) { order: 4; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-usage { order: 5; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-agents { order: 6; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [data-agents-dot] { order: 7; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [class*="pill_"] { order: 8; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [class*="divider_"] { order: 20; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [class*="selectionChip_"] { order: 21; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [class*="spacer_"] { order: 30; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [class*="modelPill_"]:not([data-agents-dot]) { order: 31; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-uc { order: 32; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-effort { order: 33; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > :has(> [title*="Shift+Tab"]) { order: 40; }
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [class*="sendButton_"] { order: 50; }
+
+/* --- Context, usage, MCP (added by custom.js) ------------------------------
+   Shown only once custom.js has found the panel's handlers
+   (data-cx-ready); until then the extension's own context ring stays. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"]:not([data-cx-ready]) > .cx-ctl,
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl[hidden],
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"][data-cx-ready] > :has(> [class*="usageButtonV2_"]) {
+  display: none;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl {
+  --cx-fan: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='3.5' cy='8' r='1.75'/%3E%3Ccircle cx='12.5' cy='3.5' r='1.5'/%3E%3Ccircle cx='12.5' cy='8' r='1.5'/%3E%3Ccircle cx='12.5' cy='12.5' r='1.5'/%3E%3Cpath d='M5.25 8H11M5 7l6-3M5 9l6 3'/%3E%3C/svg%3E");
+  --cx-agents: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='black' d='M6.42857 4.64286C7.09408 4.64286 7.65168 5.09834 7.81041 5.71429H12.6786C13.9607 5.71429 15 6.75362 15 8.03571C15 9.3178 13.9607 10.3571 12.6786 10.3571H11.9336L10.2525 12.0382C10.113 12.1777 9.88696 12.1777 9.74749 12.0382L8.06641 10.3571H7.32143C6.43383 10.3571 5.71429 11.0767 5.71429 11.9643C5.71429 12.8519 6.43383 13.5714 7.32143 13.5714H12.1896C12.3483 12.9555 12.9059 12.5 13.5714 12.5C14.3604 12.5 15 13.1396 15 13.9286C15 14.7175 14.3604 15.3571 13.5714 15.3571C12.9059 15.3571 12.3483 14.9017 12.1896 14.2857H7.32143C6.03934 14.2857 5 13.2464 5 11.9643C5 10.6822 6.03934 9.64286 7.32143 9.64286H8.06641L9.74749 7.96177L9.80329 7.91574C9.94192 7.82419 10.1305 7.83973 10.2525 7.96177L11.9336 9.64286H12.6786C13.5662 9.64286 14.2857 8.92331 14.2857 8.03571C14.2857 7.14811 13.5662 6.42857 12.6786 6.42857H7.81041C7.65168 7.04451 7.09408 7.5 6.42857 7.5C5.63959 7.5 5 6.86041 5 6.07143C5 5.28245 5.63959 4.64286 6.42857 4.64286ZM13.5714 13.2143C13.1769 13.2143 12.8571 13.5341 12.8571 13.9286C12.8571 14.3231 13.1769 14.6429 13.5714 14.6429C13.9659 14.6429 14.2857 14.3231 14.2857 13.9286C14.2857 13.5341 13.9659 13.2143 13.5714 13.2143ZM8.71931 10L10 11.2807L11.2807 10L10 8.71931L8.71931 10ZM6.42857 5.35714C6.03408 5.35714 5.71429 5.67694 5.71429 6.07143C5.71429 6.46592 6.03408 6.78571 6.42857 6.78571C6.82306 6.78571 7.14286 6.46592 7.14286 6.07143C7.14286 5.67694 6.82306 5.35714 6.42857 5.35714Z'/%3E%3C/svg%3E");
+  appearance: none;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-sizing: border-box;
+  height: 28px;
+  margin: 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--cx-muted);
+  font: inherit;
+  font-size: 12px;
+  line-height: 28px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl:hover {
+  background: var(--cx-hover);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl:active {
+  transform: translateY(0.5px);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+
+/* Context: a 13px ring (2px stroke, track at 25%), arc = % used, from 12
+   o'clock. --cx-p is set by custom.js. */
+.cx-ctx .cx-ring {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: conic-gradient(currentColor calc(var(--cx-p, 0) * 1%), color-mix(in srgb, currentColor 25%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+}
+
+/* Usage: two 16x3 bars, session on top (yellow past 80%, red past 95%),
+   weekly below. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-usage {
+  gap: 6px;
+  padding: 0 7px;
+  color: var(--vscode-foreground);
+}
+.cx-usage .cx-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 16px;
+}
+.cx-usage .cx-bar {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--vscode-foreground) 20%, transparent);
+}
+.cx-usage .cx-bar > i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: color-mix(in srgb, var(--vscode-foreground) 70%, transparent);
+}
+.cx-usage[data-level="warn"] .cx-bar:first-child > i { background: var(--vscode-charts-yellow); }
+.cx-usage[data-level="crit"] .cx-bar:first-child > i { background: var(--vscode-errorForeground); }
+.cx-usage .cx-num { display: none; }
+
+/* Agents: the agents icon + how many are working, always there. A 6px dot
+   on the icon shows their state: green (pulsing) running, yellow waiting
+   for you, red failed. The extension's own pill (only there while a chat
+   has agents) steps aside for it. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-agents {
+  position: relative;
+  gap: 3px;
+  padding: 0 7px 0 4px;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"][data-cx-ready] > [data-agents-dot] {
+  display: none;
+}
+.cx-agents .cx-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  background: currentColor;
+  -webkit-mask: var(--cx-agents) center / 28px 28px no-repeat;
+  mask: var(--cx-agents) center / 28px 28px no-repeat;
+}
+.cx-agents .cx-num {
+  min-width: 1ch;
+}
+.cx-agents[data-dot]::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 18px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--cx-bg);
+}
+.cx-agents[data-dot="running"]::after {
+  background: var(--vscode-charts-green);
+  animation: cx-pulse 1.6s ease-in-out infinite;
+}
+.cx-agents[data-dot="waiting"]::after { background: var(--vscode-charts-yellow); }
+.cx-agents[data-dot="failed"]::after { background: var(--vscode-errorForeground); }
+@keyframes cx-pulse { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) {
+  .cx-agents[data-dot="running"]::after { animation: none; }
+}
+
+
+/* --- Compact confirm (opens from the context control) ---------------------
+   Popover style: radius 10, menu colours, two-layer
+   shadow, 140ms fade + 4px rise. */
+fieldset[class*="inputContainer_"] > .cx-pop {
+  position: absolute;
+  z-index: 60;
+  box-sizing: border-box;
+  width: 260px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border, transparent));
+  border-radius: 10px;
+  background: var(--vscode-menu-background, var(--cx-bg));
+  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  box-shadow: 0 10px 28px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36)), 0 2px 6px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+  font-size: 12px;
+  line-height: 16px;
+  text-align: left;
+  animation: cx-pop-in 140ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.cx-pop .cx-pop-title {
+  margin-bottom: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.cx-pop .cx-pop-body {
+  font-size: 11.5px;
+  color: var(--cx-muted);
+}
+.cx-pop .cx-pop-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.cx-pop .cx-btn {
+  appearance: none;
+  height: 24px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cx-pop .cx-btn-primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+.cx-pop .cx-btn-primary:hover {
+  background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+}
+.cx-pop .cx-btn-secondary {
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+}
+.cx-pop .cx-btn-secondary:hover {
+  background: var(--vscode-button-secondaryHoverBackground, var(--cx-hover));
+}
+.cx-pop .cx-btn:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+@keyframes cx-pop-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* --- Effort slider (wide) -------------------------------
+   "Effort" + a 64px native range, one step per level the model offers.
+   The level colour (--c) only tints the fill, thumb and dot, mixed 80% with
+   the text colour (--ink) so it holds 3:1 in light themes; text is never
+   coloured. custom.js sets data-level and --f (0..1). */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-effort {
+  gap: 8px;
+  padding: 0 8px;
+  cursor: default;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-effort:hover {
+  background: transparent;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-effort:active {
+  transform: none;
+}
+/* level colours, shared with the bubble (which lives in the input box) */
+:is(.cx-effort, .cx-bubble) {
+  --c: var(--cx-muted);
+  --ink: color-mix(in srgb, var(--c) 80%, var(--vscode-foreground));
+}
+:is(.cx-effort, .cx-bubble)[data-level="low"] { --c: var(--vscode-charts-purple); }
+:is(.cx-effort, .cx-bubble)[data-level="medium"] { --c: var(--vscode-charts-blue); }
+:is(.cx-effort, .cx-bubble)[data-level="high"] { --c: var(--vscode-charts-green); }
+:is(.cx-effort, .cx-bubble)[data-level="xhigh"] { --c: var(--vscode-charts-yellow); }
+:is(.cx-effort, .cx-bubble)[data-level="max"] { --c: var(--vscode-charts-red); }
+:is(.cx-effort, .cx-bubble)[data-level="auto"] { --ink: var(--cx-muted); }
+.cx-effort .cx-track {
+  position: relative;
+  display: block;
+  width: 64px;
+  height: 28px;
+}
+.cx-effort .cx-range {
+  --r: 6px;
+  --th: 3px;
+  --track: color-mix(in srgb, var(--vscode-descriptionForeground) 32%, transparent);
+  --fill: var(--ink);
+  --thumb: var(--ink);
+  --tb: var(--cx-bg);
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 64px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.cx-effort[data-level="auto"] .cx-range {
+  --thumb: var(--cx-bg);
+  --tb: var(--cx-muted);
+}
+.cx-effort .cx-range::-webkit-slider-runnable-track {
+  height: var(--th);
+  border-radius: 99px;
+  background: linear-gradient(90deg,
+    var(--fill) 0 calc(var(--r) + (100% - 2 * var(--r)) * var(--f, 0)),
+    var(--track) calc(var(--r) + (100% - 2 * var(--r)) * var(--f, 0)) 100%);
+}
+.cx-effort .cx-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: calc(var(--r) * 2);
+  height: calc(var(--r) * 2);
+  margin-top: calc((var(--th) - var(--r) * 2) / 2);
+  border: 2px solid var(--tb);
+  border-radius: 50%;
+  background: var(--thumb);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.12s ease;
+}
+.cx-effort .cx-range:hover::-webkit-slider-thumb { transform: scale(1.15); }
+.cx-effort .cx-range:active::-webkit-slider-thumb { transform: scale(1.3); }
+.cx-effort .cx-range:focus { outline: none; }
+.cx-effort .cx-range:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+/* The bubble: 6px above the thumb, on hover, keyboard focus or drag.
+   custom.js puts it in the input box (not the footer) and places it, so it
+   never makes the footer look clipped. */
+fieldset[class*="inputContainer_"] > .cx-bubble {
+  position: absolute;
+  z-index: 60;
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 9px;
+  border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border, transparent));
+  border-radius: 7px;
+  background: var(--vscode-menu-background, var(--cx-bg));
+  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  box-shadow: 0 4px 14px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: cx-pop-in 120ms ease-out both;
+}
+.cx-bubble .cx-bubble-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cx-bubble .cx-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.cx-bubble .cx-bubble-note {
+  display: none;
+  font-size: 11px;
+  color: var(--cx-muted);
+}
+.cx-bubble[data-level="max"] .cx-bubble-note { display: block; }
+
+/* The model pill's "· Ultracode" steps aside: the Ultracode button shows
+   it, and the extra width would push the footer onto two lines. */
+fieldset[class*="inputContainer_"]:has([class*="inputFooterV2_"][data-cx-ready] > .cx-uc:not([hidden])) [class*="modelPillUltracode_"] {
+  display: none;
+}
+
+/* One line, always: when the footer is out of room the panel puts the model
+   pill on a row of its own; custom.js lays that row over the gap in the
+   footer instead (--cx-row-*), and the pill's label truncates to fit. */
+fieldset[class*="inputContainer_"] > [class*="modelPillRow_"] {
+  position: absolute;
+  z-index: 7;
+  top: var(--cx-row-top, 2px);
+  left: var(--cx-row-left, auto);
+  right: var(--cx-row-right, 0);
+  height: 28px;
+  padding: 0;
+  justify-content: flex-end;
+  align-items: center;
+}
+fieldset[class*="inputContainer_"] > [class*="modelPillRow_"]:not([data-cx-placed]) {
+  visibility: hidden;
+}
+
+/* The model pill's own effort word steps aside while the slider shows it. */
+fieldset[class*="inputContainer_"]:has([class*="inputFooterV2_"][data-cx-ready] > .cx-effort:not([hidden])) [class*="modelPillEffort_"] {
+  display: none;
+}
+
+/* --- Ultracode ---------------------------------------
+   Button: fan-out icon + "Ultracode", muted when off; purple, 600 and a 16%
+   purple fill when on. The label reserves its bold width so switching
+   doesn't nudge its neighbours. */
+fieldset[class*="inputContainer_"] {
+  --uc: var(--vscode-charts-purple, #b180d7);
+  --uc-hot: #efe0ff;
+  --uc-glow: 0.5;
+}
+body:is(.vscode-light, .vscode-high-contrast-light) fieldset[class*="inputContainer_"] {
+  --uc-hot: #a35fd6;
+  --uc-glow: 0.3;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-uc {
+  gap: 6px;
+  padding: 0 9px 0 7px;
+  transition: background-color 0.12s ease, color 0.12s ease, transform 0.12s ease;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-uc[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--uc) 16%, transparent);
+  color: var(--uc);
+  font-weight: 600;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-uc[aria-pressed="true"]:hover {
+  background: color-mix(in srgb, var(--uc) 24%, transparent);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-uc:active {
+  transform: scale(0.94);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-uc.cx-pop {
+  animation: cx-uc-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+.cx-uc .cx-icon-fan {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: var(--cx-fan) center / 16px 16px no-repeat;
+  mask: var(--cx-fan) center / 16px 16px no-repeat;
+}
+.cx-uc .cx-label {
+  display: inline-grid;
+}
+.cx-uc .cx-label::after {
+  content: attr(data-text);
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-weight: 600;
+}
+
+/* Effect layers (custom.js mounts them in the input box; --ox/--oy is the
+   button centre in box px).
+   switch on .. a bloom at the button, three waves of fine purple dots
+   through the inside of the box, the border lighting up where they reach
+   it; then the holding state fades in at 1.6s
+   holding .... a 1.5px purple edge with one brighter glint circling every
+   9s, and a soft glow under the box breathing every 5s; nothing moves
+   inside the box. The mode keeps its focus halo and send colour.
+   switch off . edge and glow fade out in .35s */
+@property --cx-rad { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --cx-uc-spin { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+fieldset[class*="inputContainer_"] > .cx-uc-fx {
+  position: absolute;
+  pointer-events: none;
+}
+.cx-uc-dots {
+  inset: 0;
+  border-radius: 11px;
+  background-image: radial-gradient(circle, var(--uc) 0 1.15px, transparent 1.6px);
+  background-size: 9px 9px;
+}
+.cx-uc-dots.cx-uc-hot {
+  background-image: radial-gradient(circle, var(--uc-hot) 0 1.5px, transparent 2px);
+}
+.cx-uc-wave {
+  opacity: 0;
+  -webkit-mask-image: radial-gradient(circle at var(--ox) var(--oy), transparent 0, transparent calc(var(--cx-rad) - 90px),
+    rgba(0, 0, 0, 0.25) calc(var(--cx-rad) - 55px), #000 calc(var(--cx-rad) - 10px), transparent calc(var(--cx-rad) + 2px));
+  mask-image: radial-gradient(circle at var(--ox) var(--oy), transparent 0, transparent calc(var(--cx-rad) - 90px),
+    rgba(0, 0, 0, 0.25) calc(var(--cx-rad) - 55px), #000 calc(var(--cx-rad) - 10px), transparent calc(var(--cx-rad) + 2px));
+  animation: cx-uc-wave 2.3s cubic-bezier(0.3, 0.45, 0.4, 1) var(--d, 0s) forwards;
+}
+.cx-uc-wave.cx-uc-front {
+  -webkit-mask-image: radial-gradient(circle at var(--ox) var(--oy), transparent calc(var(--cx-rad) - 16px), #000 calc(var(--cx-rad) - 4px), transparent calc(var(--cx-rad) + 2px));
+  mask-image: radial-gradient(circle at var(--ox) var(--oy), transparent calc(var(--cx-rad) - 16px), #000 calc(var(--cx-rad) - 4px), transparent calc(var(--cx-rad) + 2px));
+}
+.cx-uc-bloom {
+  left: var(--ox);
+  top: var(--oy);
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--uc) 55%, transparent), transparent 70%);
+  opacity: 0;
+  animation: cx-uc-bloom 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+/* a 1.5px ring exactly on the box's border */
+.cx-uc-ring {
+  position: absolute;
+  inset: -1px;
+  box-sizing: border-box;
+  padding: 1.5px;
+  border-radius: 12px;
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.cx-uc-reveal,
+.cx-uc-hit {
+  inset: -6px;
+}
+.cx-uc-reveal {
+  -webkit-mask-image: radial-gradient(circle at calc(var(--ox) + 6px) calc(var(--oy) + 6px), #000 var(--cx-rad), transparent calc(var(--cx-rad) + 24px));
+  mask-image: radial-gradient(circle at calc(var(--ox) + 6px) calc(var(--oy) + 6px), #000 var(--cx-rad), transparent calc(var(--cx-rad) + 24px));
+  animation: cx-uc-wave 2.3s cubic-bezier(0.3, 0.45, 0.4, 1) forwards, cx-uc-fade-late 3s linear forwards;
+}
+.cx-uc-reveal > .cx-uc-ring {
+  inset: 5px;
+  padding: 2px;
+  background: var(--uc-hot);
+}
+.cx-uc-hit {
+  -webkit-mask-image: radial-gradient(circle at calc(var(--ox) + 6px) calc(var(--oy) + 6px), transparent calc(var(--cx-rad) - 40px), #000 calc(var(--cx-rad) - 4px), transparent calc(var(--cx-rad) + 2px));
+  mask-image: radial-gradient(circle at calc(var(--ox) + 6px) calc(var(--oy) + 6px), transparent calc(var(--cx-rad) - 40px), #000 calc(var(--cx-rad) - 4px), transparent calc(var(--cx-rad) + 2px));
+  animation: cx-uc-wave 2.3s cubic-bezier(0.3, 0.45, 0.4, 1) forwards;
+}
+.cx-uc-hit > .cx-uc-ring {
+  inset: 3px;
+  padding: 4px;
+  border-radius: 15px;
+  background: var(--uc-hot);
+  filter: blur(2px);
+}
+.cx-uc-hold {
+  opacity: 0;
+  background: conic-gradient(from var(--cx-uc-spin),
+    color-mix(in srgb, var(--uc) 80%, var(--cx-bg)) 0deg 290deg,
+    var(--uc-hot) 330deg,
+    color-mix(in srgb, var(--uc) 80%, var(--cx-bg)) 360deg);
+  animation: cx-uc-in 0.6s ease 1.6s forwards, cx-uc-spin 9s linear 1.6s infinite;
+}
+.cx-uc-hold.cx-uc-still {
+  opacity: 1;
+  animation: cx-uc-spin 9s linear infinite;
+}
+/* the glow sits behind the box (z-index -1 reaches past the box, which is
+   not a stacking context), so only its blur shows around the edges */
+.cx-uc-under {
+  inset: 6px;
+  z-index: -1;
+  border-radius: 14px;
+  background: var(--uc);
+  filter: blur(20px);
+  opacity: 0;
+  animation: cx-uc-under-in 2.2s ease-out 0.4s forwards, cx-uc-breathe 5s ease-in-out 2.8s infinite;
+}
+.cx-uc-under.cx-uc-still {
+  opacity: var(--uc-glow);
+  animation: cx-uc-breathe 5s ease-in-out infinite;
+}
+.cx-uc-offring {
+  background: color-mix(in srgb, var(--uc) 80%, var(--cx-bg));
+}
+.cx-uc-under.cx-uc-off {
+  opacity: var(--uc-glow);
+}
+.cx-uc-fx.cx-uc-off {
+  animation: cx-uc-out 0.35s ease-in forwards;
+}
+
+@keyframes cx-uc-wave { 0% { --cx-rad: 0px; opacity: 1; } 75% { opacity: 1; } 100% { --cx-rad: 620px; opacity: 0; } }
+@keyframes cx-uc-bloom { 0% { opacity: 1; transform: scale(0.4); } 100% { opacity: 0; transform: scale(9); } }
+@keyframes cx-uc-fade-late { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes cx-uc-in { to { opacity: 1; } }
+@keyframes cx-uc-out { to { opacity: 0; } }
+@keyframes cx-uc-spin { from { --cx-uc-spin: 0deg; } to { --cx-uc-spin: 360deg; } }
+@keyframes cx-uc-under-in { 0% { opacity: 0; } 35% { opacity: calc(var(--uc-glow) + 0.25); } 100% { opacity: var(--uc-glow); } }
+@keyframes cx-uc-breathe { 0%, 100% { opacity: var(--uc-glow); } 50% { opacity: calc(var(--uc-glow) * 0.55); } }
+@keyframes cx-uc-pop { 0% { transform: scale(1); } 35% { transform: scale(1.12); } 100% { transform: scale(1); } }
+
+/* Reduced motion: no bloom, waves or border reveal; the edge appears at once
+   and doesn't turn; the glow holds still at 60%. */
+@media (prefers-reduced-motion: reduce) {
+  .cx-uc-wave, .cx-uc-bloom, .cx-uc-reveal, .cx-uc-hit { display: none; }
+  .cx-uc-hold, .cx-uc-hold.cx-uc-still { animation: none; opacity: 1; }
+  .cx-uc-under:not(.cx-uc-off) { animation: none; opacity: calc(var(--uc-glow) * 0.6); }
+  fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-uc.cx-pop { animation: none; }
+  fieldset[class*="inputContainer_"] > :is(.cx-pop, .cx-bubble) { animation: none; }
+}
+.vscode-reduce-motion :is(.cx-uc-wave, .cx-uc-bloom, .cx-uc-reveal, .cx-uc-hit) { display: none; }
+.vscode-reduce-motion .cx-uc-hold { animation: none; opacity: 1; }
+.vscode-reduce-motion .cx-uc-under:not(.cx-uc-off) { animation: none; opacity: calc(var(--uc-glow) * 0.6); }
+.vscode-reduce-motion fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-uc.cx-pop { animation: none; }
+
+/* --- One design in every state ---------------------------------------
+   The panel shortens its footer in stages (data-fit-stage 1-2) when it
+   thinks it's out of room. None of the custom look depends on that: the
+   footer looks the same whatever is switched on, so nothing appears,
+   disappears or moves when you change a setting. Every control has a
+   fixed width, and the set below fits the box at full width (680px) with
+   the model name whole. Narrower boxes get fixed compact sets chosen by
+   the box's width alone (data-cx-w, below). */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > * {
+  flex-shrink: 0;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [class*="spacer_"] {
+  flex-shrink: 1;
+  min-width: 0;
+}
+/* the selection chip gives way first; the model name only in a very
+   narrow box */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [class*="selectionChip_"] {
+  flex-shrink: 1000;
+  min-width: 60px;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > [class*="modelPill_"]:not([data-agents-dot]) [class*="modelPillLabel_"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Effort: no word (the bubble names the level), 56px track. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-effort .cx-effort-label {
+  display: none;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-effort {
+  padding: 0 4px;
+}
+.cx-effort .cx-track,
+.cx-effort .cx-range {
+  width: 56px;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] > .cx-ctl.cx-uc {
+  padding: 0 8px 0 6px;
+}
+/* Long mode names get their short form; the menu keeps the full one. */
+fieldset[class*="inputContainer_"][data-permission-mode="acceptEdits"] [class*="inputFooterV2_"] button[class*="footerButton_"][title*="Shift+Tab"] > span,
+fieldset[class*="inputContainer_"][data-permission-mode="bypassPermissions"] [class*="inputFooterV2_"] button[class*="footerButton_"][title*="Shift+Tab"] > span {
+  font-size: 0;
+}
+fieldset[class*="inputContainer_"][data-permission-mode="acceptEdits"] [class*="inputFooterV2_"] button[class*="footerButton_"][title*="Shift+Tab"] > span::before {
+  content: "Auto-edit";
+  font-size: 12px;
+}
+fieldset[class*="inputContainer_"][data-permission-mode="bypassPermissions"] [class*="inputFooterV2_"] button[class*="footerButton_"][title*="Shift+Tab"] > span::before {
+  content: "Bypass";
+  font-size: 12px;
+}
+
+/* Narrower boxes: a fixed compact set per width. custom.js sets
+   data-cx-w on the footer from its width alone (never from what's switched
+   on); a CSS container query would also do it, but it turns the footer
+   into a layout container, which moves the pop-ups inside it.
+   compact (below ~670px box) .. context ring only, Ultracode icon, mode dot
+   narrow  (below ~515px) ...... usage and cache step aside, 48px slider
+   tiny    (below ~395px) ...... agents and Remote step aside, 40px slider;
+                                 the model name may shorten */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"]:is([data-cx-w="compact"], [data-cx-w="narrow"], [data-cx-w="tiny"]) > .cx-ctx .cx-num,
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"]:is([data-cx-w="compact"], [data-cx-w="narrow"], [data-cx-w="tiny"]) > .cx-uc .cx-label,
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"]:is([data-cx-w="compact"], [data-cx-w="narrow"], [data-cx-w="tiny"]) button[class*="footerButton_"][title*="Shift+Tab"] > span,
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"]:is([data-cx-w="compact"], [data-cx-w="narrow"], [data-cx-w="tiny"]) button[class*="footerButton_"][title*="Shift+Tab"]::after {
+  display: none;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"]:is([data-cx-w="compact"], [data-cx-w="narrow"], [data-cx-w="tiny"]) > :is(.cx-ctx, .cx-ctl.cx-uc),
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"]:is([data-cx-w="compact"], [data-cx-w="narrow"], [data-cx-w="tiny"]) button[class*="footerButton_"][title*="Shift+Tab"] {
+  width: 28px;
+  padding: 0;
+  justify-content: center;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"]:is([data-cx-w="narrow"], [data-cx-w="tiny"]) > :is(.cx-usage, :has(> [data-cache-window])) {
+  display: none;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"]:is([data-cx-w="narrow"], [data-cx-w="tiny"]) .cx-effort :is(.cx-track, .cx-range) {
+  width: 48px;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"][data-cx-w="tiny"] > :is(.cx-agents, [class*="pill_"]) {
+  display: none;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"][data-cx-w="tiny"] .cx-effort :is(.cx-track, .cx-range) {
+  width: 40px;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"][data-cx-w="tiny"] > [class*="modelPill_"]:not([data-agents-dot]) {
+  flex-shrink: 1;
+  min-width: 44px;
+}
+
+/* --- Send ----------------------------------------------------------------
+   28px circle.
+   typed .... mode fill + a 16px up-arrow
+   empty .... no fill, a faint ring, muted arrow (the button is disabled)
+   working .. mode colour at 20% + a 10px stop square, and a spinning arc
+              around it (aria-label "Stop")
+   The extension's own icons are swapped for these so the shapes match. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"] {
+  position: relative;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--cx-send);
+  color: var(--cx-send-fg);
+  box-shadow: none;
+  opacity: 1;
+  filter: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"] > svg {
+  display: none;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"]::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12.5v-9M4.5 7L8 3.5 11.5 7'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12.5v-9M4.5 7L8 3.5 11.5 7'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"]:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"]:active:not(:disabled) {
+  transform: translateY(0.5px);
+  filter: brightness(0.95);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"]:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"]:disabled {
+  background: transparent;
+  color: var(--cx-muted);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vscode-foreground) 22%, transparent);
+  cursor: default;
+}
+/* Working: the button grows to 34px for the spinner (negative margins keep
+   its 28px footprint), so the arc stays inside its own box — anything
+   sticking out would make the footer think it's clipped. */
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"][aria-label="Stop"] {
+  width: 34px;
+  height: 34px;
+  margin: -3px -3px -3px 1px;
+  background: radial-gradient(circle closest-side, color-mix(in srgb, var(--cx-send) 20%, transparent) calc(100% - 3px), transparent calc(100% - 2.5px));
+  color: var(--cx-send);
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"][aria-label="Stop"]::before {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  -webkit-mask: none;
+  mask: none;
+}
+fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"][aria-label="Stop"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Ccircle cx='17' cy='17' r='16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-dasharray='20 81'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Ccircle cx='17' cy='17' r='16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-dasharray='20 81'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  animation: cx-spin 1.1s linear infinite;
+  pointer-events: none;
+}
+@keyframes cx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"][aria-label="Stop"]::after {
+    animation: none;
+  }
+}
+.vscode-reduce-motion fieldset[class*="inputContainer_"] [class*="inputFooterV2_"] [class*="sendButton_"][aria-label="Stop"]::after {
+  animation: none;
+}

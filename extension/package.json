@@ -1,0 +1,13 @@
+{
+  "name": "clawd-companion-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Patches your installed Claude Code VS Code extension so Clawd lives on the chat input box (custom.js + custom.css + the animations)",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "install-vsix": "node scripts/install.mjs",
+    "sync": "node scripts/sync.mjs",
+    "playground": "node scripts/playground.mjs"
+  }
+}
