@@ -16,6 +16,9 @@ back up, poke him and he reacts, click him and he answers your side questions.
   <img src="animations/svg/clawd-sleep-hammock.svg" width="192" alt="Clawd asleep in a hammock">
   <img src="animations/svg/clawd-vibe.svg" width="192" alt="Clawd the phonk DJ">
 </p>
+<p align="center">
+  ▶ <b>Watch the showcase video:</b> <a href="video/clawd-companion-16x9.mp4">16:9 (1:49)</a> · <a href="video/clawd-companion-9x16.mp4">9:16 (48 s)</a>
+</p>
 
 > **Unofficial fan project.** Not made, endorsed or supported by Anthropic. Clawd and Claude are Anthropic's.
 > This repository contains none of Anthropic's code: it patches the copy of the Claude Code extension that you
@@ -113,7 +116,7 @@ to match. Details: [docs/how-it-works.md](docs/how-it-works.md).
 | `animations/` | the generator (Python), the art rules, and the built animations (`svg/`, `svg-tx/` for set-up/pack-away clips) |
 | `extension/` | the patcher (`npm run build / install-vsix / sync / playground`) and `custom/custom.js` + `custom.css` |
 | `docs/` | how it works, how to add an animation |
-| `video/` | the showcase video's source |
+| `video/` | the showcase video (16:9 and 9:16) and its source |
 
 ## Contributing
 
